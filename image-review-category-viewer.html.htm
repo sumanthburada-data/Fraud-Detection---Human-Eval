@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Review - Category Viewer</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,sans-serif;background:#f0f2f5;color:#1a1a2e}
+.header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:18px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.header h1{font-size:1.35rem;font-weight:700;letter-spacing:.3px}
+.header h1 span{font-weight:400;opacity:.75;font-size:.85rem;margin-left:8px}
+.header-stats{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.header-stat{text-align:center;font-size:.72rem;opacity:.85;line-height:1.3}
+.header-stat .num{font-size:1.15rem;font-weight:700;display:block;opacity:1}
+.info-banner{background:#fff3cd;border:1px solid #ffc107;color:#664d03;padding:10px 20px;text-align:center;font-size:.85rem;display:flex;align-items:center;justify-content:center;gap:8px}
+.info-banner.hidden{display:none}
+.container{max-width:1320px;margin:0 auto;padding:16px 20px}
+.dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.dash-card{background:#fff;border-radius:10px;padding:14px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid #ccc}
+.dash-card .dash-val{font-size:1.5rem;font-weight:800}
+.dash-card .dash-label{font-size:.72rem;color:#666;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.dash-card .dash-pct{font-size:.75rem;color:#999;margin-top:1px}
+.dash-card.dc-total{border-left-color:#0d6efd}
+.dash-card.dc-fraud{border-left-color:#dc3545}
+.dash-card.dc-face{border-left-color:#e67e22}
+.dash-card.dc-vehicle{border-left-color:#0ea5e9}
+.dash-card.dc-profanity{border-left-color:#8b5cf6}
+.dash-card.dc-flagged{border-left-color:#f59e0b}
+.dash-card.dc-reviewed{border-left-color:#16a34a}
+.dash-card.dc-ai-correct{border-left-color:#0891b2}
+.dash-card.dc-ai-wrong{border-left-color:#e11d48}
+.filter-section{background:#fff;border-radius:12px;padding:16px 20px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.search-box{flex:1;min-width:200px;padding:9px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.88rem;outline:none;transition:border .2s}
+.search-box:focus{border-color:#0d6efd}
+.select-filter{padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.88rem;background:#fff;outline:none;min-width:160px}
+.select-filter.sf-manual-review{border-color:#7c3aed;background:linear-gradient(90deg,#f5f3ff,#fff);font-weight:600}
+.category-bar{background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.category-bar h3{font-size:.82rem;font-weight:700;color:#555;margin-bottom:10px;text-transform:uppercase;letter-spacing:.6px}
+.cat-buttons{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cat-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:24px;font-size:.82rem;font-weight:600;cursor:pointer;border:2px solid;transition:all .2s ease;user-select:none}
+.cat-btn .cat-count{background:rgba(255,255,255,.3);padding:1px 7px;border-radius:10px;font-size:.72rem;font-weight:700;min-width:20px;text-align:center}
+.cat-btn.cat-fraud{border-color:#dc3545;color:#dc3545;background:transparent}
+.cat-btn.cat-fraud.active{background:#dc3545;color:#fff}
+.cat-btn.cat-fraud .cat-count{background:rgba(220,53,69,.12)}
+.cat-btn.cat-fraud.active .cat-count{background:rgba(255,255,255,.25)}
+.cat-btn.cat-face{border-color:#e67e22;color:#e67e22;background:transparent}
+.cat-btn.cat-face.active{background:#e67e22;color:#fff}
+.cat-btn.cat-face .cat-count{background:rgba(230,126,34,.12)}
+.cat-btn.cat-face.active .cat-count{background:rgba(255,255,255,.25)}
+.cat-btn.cat-vehicle{border-color:#0ea5e9;color:#0ea5e9;background:transparent}
+.cat-btn.cat-vehicle.active{background:#0ea5e9;color:#fff}
+.cat-btn.cat-vehicle .cat-count{background:rgba(14,165,233,.12)}
+.cat-btn.cat-vehicle.active .cat-count{background:rgba(255,255,255,.25)}
+.cat-btn.cat-profanity{border-color:#8b5cf6;color:#8b5cf6;background:transparent}
+.cat-btn.cat-profanity.active{background:#8b5cf6;color:#fff}
+.cat-btn.cat-profanity .cat-count{background:rgba(139,92,246,.12)}
+.cat-btn.cat-profanity.active .cat-count{background:rgba(255,255,255,.25)}
+.cat-btn.cat-flagged{border-color:#f59e0b;color:#f59e0b;background:transparent}
+.cat-btn.cat-flagged.active{background:#f59e0b;color:#fff}
+.cat-btn.cat-flagged .cat-count{background:rgba(245,158,11,.12)}
+.cat-btn.cat-flagged.active .cat-count{background:rgba(255,255,255,.25)}
+.cat-btn.cat-clear{border-color:#6b7280;color:#6b7280;background:transparent;font-weight:500}
+.cat-btn.cat-clear:hover{background:#6b7280;color:#fff}
+.cat-divider{width:1px;height:28px;background:#e5e7eb;margin:0 4px}
+.card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:16px;transition:box-shadow .2s}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.card.card-reviewed{box-shadow:0 0 0 2px #16a34a,0 2px 8px rgba(0,0,0,.07)}
+.card-header{display:flex;align-items:center;gap:10px;padding:14px 20px;background:linear-gradient(90deg,#f8faff,#fff);border-bottom:1px solid #eef1f6}
+.card-badge{background:#0d6efd;color:#fff;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap}
+.card-badge-reviewed{background:#16a34a;color:#fff;font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;margin-left:auto}
+.card-order{font-size:1.05rem;font-weight:700;color:#0d6efd;font-family:'Courier New',monospace;letter-spacing:.3px}
+.images-row{display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:240px}
+.img-col{display:flex;flex-direction:column;border-right:1px solid #f0f0f0}
+.img-col:last-child{border-right:none}
+.img-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#888;padding:8px 14px 4px;background:#fafbfc}
+.img-container{flex:1;display:flex;align-items:center;justify-content:center;padding:10px;background:#fafbfc;min-height:200px}
+.img-container img{max-width:100%;max-height:280px;object-fit:contain;border-radius:6px;cursor:pointer;transition:transform .2s}
+.img-container img:hover{transform:scale(1.03)}
+.img-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;font-size:.8rem;text-align:center;padding:20px;gap:6px}
+.img-placeholder .ph-icon{font-size:2rem}
+.img-placeholder .ph-url{font-size:.65rem;color:#ccc;word-break:break-all;max-width:240px}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 20px;background:#f8f9fb;border-top:1px solid #eef1f6;font-size:.78rem}
+.meta-item{display:flex;align-items:center;gap:4px}
+.meta-item .meta-key{font-weight:600;color:#888}
+.meta-item .meta-val{color:#333}
+.meta-item .meta-val.decision-bad{color:#dc3545;font-weight:700}
+.meta-item .meta-val.decision-good{color:#16a34a;font-weight:700}
+.pills-row{display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px 14px;background:#f8f9fb}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:16px;font-size:.72rem;font-weight:600}
+.pill.p-fraud-on{background:#fde8e8;color:#dc3545}
+.pill.p-face-on{background:#fef3e2;color:#e67e22}
+.pill.p-vehicle-on{background:#e0f2fe;color:#0284c7}
+.pill.p-profanity-on{background:#ede9fe;color:#7c3aed}
+.pill.p-off{background:#f3f4f6;color:#9ca3af}
+.review-section{background:linear-gradient(90deg,#f0fdf4,#ecfdf5);border-top:2px solid #bbf7d0;padding:16px 20px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.review-section .review-group{display:flex;flex-direction:column;gap:4px}
+.review-section .review-group label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#15803d}
+.review-select{padding:8px 14px;border:1.5px solid #86efac;border-radius:8px;font-size:.85rem;background:#fff;outline:none;min-width:140px;cursor:pointer;transition:border .2s}
+.review-select:focus{border-color:#16a34a}
+.review-select.filled{border-color:#16a34a;background:#f0fdf4}
+.review-comment{padding:8px 14px;border:1.5px solid #86efac;border-radius:8px;font-size:.85rem;background:#fff;outline:none;min-width:260px;flex:1;transition:border .2s;resize:none;height:38px;font-family:inherit}
+.review-comment:focus{border-color:#16a34a}
+.review-comment.filled{border-color:#16a34a;background:#f0fdf4}
+.review-section .review-tag{font-size:.68rem;color:#16a34a;font-weight:600;align-self:center;margin-left:auto;display:flex;align-items:center;gap:4px;background:#dcfce7;padding:4px 10px;border-radius:12px}
+.csv-col-tag{display:inline-flex;align-items:center;gap:4px;font-size:.62rem;color:#7c3aed;background:#ede9fe;padding:2px 8px;border-radius:8px;font-weight:600;margin-left:6px;vertical-align:middle}
+.download-bar{background:#fff;border-radius:12px;padding:14px 20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.download-bar .dl-info{font-size:.85rem;color:#555}
+.download-bar .dl-info strong{color:#16a34a}
+.download-btn{padding:10px 24px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.88rem;transition:all .15s;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(22,163,74,.25)}
+.download-btn:hover{background:linear-gradient(135deg,#15803d,#166534);box-shadow:0 4px 12px rgba(22,163,74,.35);transform:translateY(-1px)}
+.download-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.download-btn .dl-icon{font-size:1.1rem}
+.review-progress{width:200px;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+.review-progress-fill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e);border-radius:4px;transition:width .3s ease}
+.pagination{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:14px 0;font-size:.85rem}
+.pagination-info{color:#666}
+.pagination-controls{display:flex;align-items:center;gap:8px}
+.page-btn{padding:7px 16px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:.82rem;font-weight:600;transition:all .15s}
+.page-btn:hover:not(:disabled){background:#0d6efd;color:#fff;border-color:#0d6efd}
+.page-btn:disabled{opacity:.4;cursor:not-allowed}
+.page-size-select{padding:7px 10px;border:1.5px solid #d1d5db;border-radius:8px;font-size:.82rem}
+.drop-zone{border:2.5px dashed #cbd5e1;border-radius:14px;padding:28px;text-align:center;margin-bottom:16px;transition:all .2s;cursor:pointer;background:#fafbfd}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#0d6efd;background:#eff6ff}
+.drop-zone h3{font-size:1rem;margin-bottom:4px;color:#444}
+.drop-zone p{font-size:.8rem;color:#888}
+.drop-zone .upload-btn{display:inline-block;margin-top:10px;padding:9px 22px;background:#0d6efd;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.85rem;transition:background .15s}
+.drop-zone .upload-btn:hover{background:#0b5ed7}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:none;align-items:center;justify-content:center;cursor:zoom-out}
+.modal-overlay.show{display:flex}
+.modal-overlay img{max-width:92vw;max-height:92vh;object-fit:contain;border-radius:8px;box-shadow:0 4px 30px rgba(0,0,0,.5)}
+.modal-close{position:fixed;top:18px;right:24px;color:#fff;font-size:2rem;cursor:pointer;z-index:201;background:rgba(0,0,0,.4);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.no-results{text-align:center;padding:50px 20px;color:#888;font-size:1rem}
+.no-results .nr-icon{font-size:3rem;margin-bottom:10px}
+@media(max-width:768px){
+  .header{padding:12px 16px}.header h1{font-size:1.1rem}
+  .images-row{grid-template-columns:1fr}
+  .dashboard{grid-template-columns:repeat(3,1fr)}
+  .filter-row{flex-direction:column}.search-box{min-width:100%}
+  .review-section{flex-direction:column}.review-comment{min-width:100%}
+}
+@media(max-width:480px){.dashboard{grid-template-columns:repeat(2,1fr)}.cat-buttons{justify-content:center}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Image Review - Category Viewer <span id="headerSub"></span></h1>
+  <div class="header-stats" id="headerStats"></div>
+</div>
+
+<div class="info-banner" id="infoBanner">
+  Showing <strong>8 sample rows</strong>. Click <strong>Load Full CSV</strong> below to load your complete dataset.
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal-close" id="modalCloseBtn">X</div>
+  <img id="modalImg" src="" alt="Full size">
+</div>
+
+<div class="container">
+  <div class="dashboard" id="dashboard"></div>
+
+  <!-- Download Bar -->
+  <div class="download-bar" id="downloadBar">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div class="dl-info">Reviewed: <strong><span id="reviewedCount">0</span> / <span id="reviewTotal">0</span></strong></div>
+      <div class="review-progress"><div class="review-progress-fill" id="reviewProgressFill" style="width:0%"></div></div>
+    </div>
+    <button class="download-btn" id="downloadBtn" onclick="downloadReviewedCSV()">
+      <span class="dl-icon">&#11015;</span> Download Reviewed CSV
+    </button>
+  </div>
+
+  <div class="filter-section">
+    <div class="filter-row">
+      <label>Order ID:</label>
+      <input type="text" class="search-box" id="searchBox" placeholder="Search by Order ID...">
+      <label>Decision:</label>
+      <select class="select-filter" id="decisionFilter">
+        <option value="">All Decisions</option>
+      </select>
+      <label>Manual Review:</label>
+      <select class="select-filter sf-manual-review" id="manualReviewFilter">
+        <option value="">All</option>
+        <option value="Yes">&#10003; Yes</option>
+        <option value="No">&#10007; No</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="category-bar">
+    <h3>Filter by Detection Category</h3>
+    <div class="cat-buttons" id="catButtons">
+      <div class="cat-btn cat-fraud" data-cat="isFraudPhoto" id="btn-fraud">
+        Fraud Photo <span class="cat-count" id="cnt-fraud">0</span>
+      </div>
+      <div class="cat-btn cat-face" data-cat="isHumanFaceDetected" id="btn-face">
+        Human Face <span class="cat-count" id="cnt-face">0</span>
+      </div>
+      <div class="cat-btn cat-vehicle" data-cat="isShotFromInsideVehicle" id="btn-vehicle">
+        Inside Vehicle <span class="cat-count" id="cnt-vehicle">0</span>
+      </div>
+      <div class="cat-btn cat-profanity" data-cat="isProfanityDetected" id="btn-profanity">
+        Profanity <span class="cat-count" id="cnt-profanity">0</span>
+      </div>
+      <div class="cat-divider"></div>
+      <div class="cat-btn cat-flagged" data-cat="__anyFlag" id="btn-flagged">
+        Show All Flagged <span class="cat-count" id="cnt-flagged">0</span>
+      </div>
+      <div class="cat-btn cat-clear" id="btn-clear">Clear All</div>
+    </div>
+  </div>
+
+  <div class="drop-zone" id="dropZone">
+    <h3>Load Full CSV</h3>
+    <p>Drag and drop your CSV file here, or click the button below</p>
+    <button class="upload-btn" id="uploadBtn">Choose CSV File</button>
+    <input type="file" id="fileInput" accept=".csv" style="display:none">
+  </div>
+
+  <div id="cardsContainer"></div>
+
+  <div class="no-results" id="noResults" style="display:none">
+    <div class="nr-icon">No match</div>
+    <p>No records match your current filters.</p>
+  </div>
+
+  <div class="pagination" id="paginationBar">
+    <div class="pagination-info" id="pagInfo">Showing 0 of 0</div>
+    <div class="pagination-controls">
+      <label style="font-size:.78rem;color:#666">Per page:</label>
+      <select class="page-size-select" id="pageSize">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="all">All</option>
+      </select>
+      <button class="page-btn" id="prevBtn">Prev</button>
+      <button class="page-btn" id="nextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var SAMPLE_CSV = [
+  "orderId,taskId,imageUrl,originalUrl,isFraudPhoto,isHumanFaceDetected,isShotFromInsideVehicle,isProfanityDetected,imageDecision,pinotUpdatedTs",
+  "200014730388815,85754dfe-a1f7-4a39-8e1d-053e3e76c22c,http://images.delivery.walmart.com/b143830d-8df6-4012-8ecb-441955c7359f.jpeg,null,False,False,True,False,unacceptable,2026-06-03 19:38:27.067",
+  "200014614290203,1496f159-e3ad-4150-808a-169081f8dec9,http://images.delivery.walmart.com/372d0531-d0d0-45b6-8a0e-6a882ca6f67c.jpeg,http://images.delivery.walmart.com/04768158-fa3a-4475-9219-a5db9f8fa371.jpeg,False,True,True,False,unacceptable,2026-06-03 19:38:26.301",
+  "200015099381308,a3c262bb-1abf-4d5d-9711-d8ed6305be95,http://images.delivery.walmart.com/fdc1c9b1-7f6e-4aeb-9eb8-fb1e15326ac2.jpeg,null,False,False,True,False,unacceptable,2026-06-03 19:38:25.913",
+  "200015133863630,92154cbc-b084-4f05-8e67-a6d5b57c1a0c,http://images.delivery.walmart.com/9e2708df-2e55-4149-8e12-656656050e3d.jpeg,null,False,False,True,False,unacceptable,2026-06-03 19:38:25.339",
+  "200014847106066,9bce4dce-e756-4c92-a6e1-0e47116fad4c,http://images.delivery.walmart.com/b6ef43e4-fe3c-407f-a8b7-41469339fcc4.jpeg,null,False,False,True,False,unacceptable,2026-06-03 19:38:24.849",
+  "200014721487612,d73fc943-2aa4-4f85-b3e5-8ae1706edf60,http://images.delivery.walmart.com/4ae840e4-c48c-4fdc-82ac-e14aca7ed8e4.jpeg,null,False,False,True,False,unacceptable,2026-06-03 19:38:24.645",
+  "200014868168443,8d635a58-f298-4003-8e4c-0850bfb414df,http://images.delivery.walmart.com/4663308d-a549-4449-8638-9aa5ccdc60fb.jpeg,null,False,False,True,False,unacceptable,2026-06-03 19:38:24.546",
+  "200015138201723,1b802c33-1734-4566-b1a0-e5e5428e5d1d,http://images.delivery.walmart.com/7b7bd190-a144-4322-bf4c-9c2c3462bb0d.jpeg,null,True,False,False,False,unacceptable,2026-06-03 19:38:24.100"
+].join("\n");
+
+var allData = [];
+var filtered = [];
+var currentPage = 0;
+var perPage = 10;
+var activeCats = {};
+
+var reviewData = {};
+var csvHasReviewCols = false;
+
+function reviewKey(row) {
+  return (row.orderId || "") + "|" + (row.taskId || "");
+}
+
+function getReview(row) {
+  var key = reviewKey(row);
+  if (!reviewData[key]) {
+    reviewData[key] = { aiCorrect: "", confusionMatrix: "", comments: "" };
+  }
+  return reviewData[key];
+}
+
+function isRowReviewed(row) {
+  var r = reviewData[reviewKey(row)];
+  return r && (r.aiCorrect !== "" || r.confusionMatrix !== "");
+}
+
+function getRowAiCorrect(row) {
+  var r = reviewData[reviewKey(row)];
+  return r ? r.aiCorrect : "";
+}
+
+function prePopulateReviewDataFromCSV() {
+  csvHasReviewCols = false;
+  if (allData.length === 0) return;
+  var first = allData[0];
+  var hasAi = first.hasOwnProperty("reviewAiCorrect");
+  var hasCm = first.hasOwnProperty("reviewConfusionMatrix");
+  var hasComm = first.hasOwnProperty("reviewComments");
+  if (!hasAi && !hasCm && !hasComm) return;
+  csvHasReviewCols = true;
+
+  for (var i = 0; i < allData.length; i++) {
+    var r = allData[i];
+    var key = reviewKey(r);
+    var rev = reviewData[key] || { aiCorrect: "", confusionMatrix: "", comments: "" };
+
+    if (hasAi) {
+      var val = (r.reviewAiCorrect || "").trim();
+      var lv = val.toLowerCase();
+      if (lv === "yes" || lv === "y" || lv === "true" || lv === "1" || lv === "correct") {
+        rev.aiCorrect = "Yes";
+      } else if (lv === "no" || lv === "n" || lv === "false" || lv === "0" || lv === "wrong" || lv === "incorrect") {
+        rev.aiCorrect = "No";
+      } else if (val !== "") {
+        rev.aiCorrect = val;
+      }
+    }
+
+    if (hasCm) {
+      var cmVal = (r.reviewConfusionMatrix || "").trim().toUpperCase();
+      if (cmVal === "TP" || cmVal === "TN" || cmVal === "FP" || cmVal === "FN") {
+        rev.confusionMatrix = cmVal;
+      } else if ((r.reviewConfusionMatrix || "").trim() !== "") {
+        rev.confusionMatrix = (r.reviewConfusionMatrix || "").trim();
+      }
+    }
+
+    if (hasComm) {
+      var commVal = (r.reviewComments || "").trim();
+      if (commVal !== "") {
+        rev.comments = commVal;
+      }
+    }
+
+    reviewData[key] = rev;
+  }
+}
+
+function populateManualReviewFilter() {
+  var sel = document.getElementById("manualReviewFilter");
+  var prev = sel.value;
+
+  var yesCount = 0, noCount = 0;
+  for (var i = 0; i < allData.length; i++) {
+    var key = reviewKey(allData[i]);
+    var rev = reviewData[key];
+    if (rev) {
+      if (rev.aiCorrect === "Yes") yesCount++;
+      else if (rev.aiCorrect === "No") noCount++;
+    }
+  }
+
+  sel.innerHTML = '<option value="">All</option>';
+  sel.innerHTML += '<option value="Yes">&#10003; Yes' + (yesCount > 0 ? ' (' + yesCount + ')' : '') + '</option>';
+  sel.innerHTML += '<option value="No">&#10007; No' + (noCount > 0 ? ' (' + noCount + ')' : '') + '</option>';
+
+  if (prev) sel.value = prev;
+}
+
+function countReviewed() {
+  var c = 0;
+  for (var i = 0; i < allData.length; i++) {
+    if (isRowReviewed(allData[i])) c++;
+  }
+  return c;
+}
+
+function countAiCorrect() {
+  var yes = 0, no = 0;
+  for (var i = 0; i < allData.length; i++) {
+    var val = getRowAiCorrect(allData[i]);
+    if (val === "Yes") yes++;
+    else if (val === "No") no++;
+  }
+  return { yes: yes, no: no };
+}
+
+function updateReviewProgress() {
+  var reviewed = countReviewed();
+  var total = allData.length;
+  document.getElementById("reviewedCount").textContent = reviewed;
+  document.getElementById("reviewTotal").textContent = total;
+  var pct = total > 0 ? (reviewed / total * 100) : 0;
+  document.getElementById("reviewProgressFill").style.width = pct.toFixed(1) + "%";
+}
+
+function parseCSV(text) {
+  var lines = text.trim().split("\n");
+  if (lines.length < 2) return [];
+
+  function parseLine(line) {
+    var fields = [];
+    var current = "";
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (i + 1 < line.length && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          current += ch;
+        }
+      } else {
+        if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ',') {
+          fields.push(current.trim());
+          current = "";
+        } else {
+          current += ch;
+        }
+      }
+    }
+    fields.push(current.trim());
+    return fields;
+  }
+
+  var headers = parseLine(lines[0]);
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === "") continue;
+    var vals = parseLine(lines[i]);
+    if (vals.length < headers.length) continue;
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = (vals[j] || "").trim();
+    }
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function toBool(v) {
+  if (!v) return false;
+  var lv = v.toLowerCase();
+  return lv === "true" || lv === "1" || lv === "yes";
+}
+
+function hasAnyFlag(r) {
+  return toBool(r.isFraudPhoto) || toBool(r.isHumanFaceDetected) || toBool(r.isShotFromInsideVehicle) || toBool(r.isProfanityDetected);
+}
+
+function pct(n, total) {
+  if (!total) return "0%";
+  return (n / total * 100).toFixed(1) + "%";
+}
+
+function updateDashboard() {
+  var total = allData.length;
+  var fraud = 0, face = 0, vehicle = 0, profanity = 0, flagged = 0;
+  var reviewed = countReviewed();
+  var aiCounts = countAiCorrect();
+  for (var i = 0; i < allData.length; i++) {
+    if (toBool(allData[i].isFraudPhoto)) fraud++;
+    if (toBool(allData[i].isHumanFaceDetected)) face++;
+    if (toBool(allData[i].isShotFromInsideVehicle)) vehicle++;
+    if (toBool(allData[i].isProfanityDetected)) profanity++;
+    if (hasAnyFlag(allData[i])) flagged++;
+  }
+  document.getElementById("dashboard").innerHTML =
+    '<div class="dash-card dc-total"><div class="dash-val">' + total + '</div><div class="dash-label">Total Records</div></div>' +
+    '<div class="dash-card dc-reviewed"><div class="dash-val">' + reviewed + '</div><div class="dash-label">Reviewed</div><div class="dash-pct">' + pct(reviewed, total) + '</div></div>' +
+    '<div class="dash-card dc-ai-correct"><div class="dash-val">' + aiCounts.yes + '</div><div class="dash-label">Manual Review &#10003;</div><div class="dash-pct">' + pct(aiCounts.yes, total) + '</div></div>' +
+    '<div class="dash-card dc-ai-wrong"><div class="dash-val">' + aiCounts.no + '</div><div class="dash-label">Manual Review &#10007;</div><div class="dash-pct">' + pct(aiCounts.no, total) + '</div></div>' +
+    '<div class="dash-card dc-fraud"><div class="dash-val">' + fraud + '</div><div class="dash-label">Fraud Photo</div><div class="dash-pct">' + pct(fraud, total) + '</div></div>' +
+    '<div class="dash-card dc-face"><div class="dash-val">' + face + '</div><div class="dash-label">Human Face</div><div class="dash-pct">' + pct(face, total) + '</div></div>' +
+    '<div class="dash-card dc-vehicle"><div class="dash-val">' + vehicle + '</div><div class="dash-label">Inside Vehicle</div><div class="dash-pct">' + pct(vehicle, total) + '</div></div>' +
+    '<div class="dash-card dc-profanity"><div class="dash-val">' + profanity + '</div><div class="dash-label">Profanity</div><div class="dash-pct">' + pct(profanity, total) + '</div></div>' +
+    '<div class="dash-card dc-flagged"><div class="dash-val">' + flagged + '</div><div class="dash-label">Total Flagged</div><div class="dash-pct">' + pct(flagged, total) + '</div></div>';
+
+  document.getElementById("headerSub").textContent = "(" + total + " records)";
+  document.getElementById("headerStats").innerHTML =
+    '<div class="header-stat"><span class="num" style="color:#4ade80">' + reviewed + '/' + total + '</span>Reviewed</div>' +
+    '<div class="header-stat"><span class="num" style="color:#06b6d4">' + aiCounts.yes + '</span>Review &#10003;</div>' +
+    '<div class="header-stat"><span class="num" style="color:#fb7185">' + aiCounts.no + '</span>Review &#10007;</div>' +
+    '<div class="header-stat"><span class="num" style="color:#f87171">' + fraud + '</span>Fraud</div>' +
+    '<div class="header-stat"><span class="num" style="color:#fb923c">' + face + '</span>Face</div>' +
+    '<div class="header-stat"><span class="num" style="color:#38bdf8">' + vehicle + '</span>Vehicle</div>' +
+    '<div class="header-stat"><span class="num" style="color:#a78bfa">' + profanity + '</span>Profanity</div>';
+
+  document.getElementById("cnt-fraud").textContent = fraud;
+  document.getElementById("cnt-face").textContent = face;
+  document.getElementById("cnt-vehicle").textContent = vehicle;
+  document.getElementById("cnt-profanity").textContent = profanity;
+  document.getElementById("cnt-flagged").textContent = flagged;
+
+  updateReviewProgress();
+}
+
+function populateDecisionFilter() {
+  var sel = document.getElementById("decisionFilter");
+  var seen = {};
+  for (var i = 0; i < allData.length; i++) {
+    var d = allData[i].imageDecision;
+    if (d) seen[d] = true;
+  }
+  var vals = Object.keys(seen).sort();
+  sel.innerHTML = '<option value="">All Decisions</option>';
+  for (var i = 0; i < vals.length; i++) {
+    sel.innerHTML += '<option value="' + vals[i] + '">' + vals[i] + '</option>';
+  }
+}
+
+function countActive() {
+  var c = 0;
+  for (var k in activeCats) { if (activeCats[k]) c++; }
+  return c;
+}
+
+function applyFilters() {
+  var query = document.getElementById("searchBox").value.toLowerCase();
+  var decision = document.getElementById("decisionFilter").value;
+  var manualReviewVal = document.getElementById("manualReviewFilter").value;
+  var anyFlagMode = activeCats["__anyFlag"] || false;
+  var catKeys = [];
+  for (var k in activeCats) {
+    if (k !== "__anyFlag" && activeCats[k]) catKeys.push(k);
+  }
+
+  filtered = [];
+  for (var i = 0; i < allData.length; i++) {
+    var r = allData[i];
+    if (query && (r.orderId || "").toLowerCase().indexOf(query) === -1) continue;
+    if (decision && r.imageDecision !== decision) continue;
+
+    if (manualReviewVal) {
+      var rowAiVal = getRowAiCorrect(r);
+      if (manualReviewVal === "Yes" && rowAiVal !== "Yes") continue;
+      if (manualReviewVal === "No" && rowAiVal !== "No") continue;
+    }
+
+    if (anyFlagMode && !hasAnyFlag(r)) continue;
+    if (catKeys.length > 0) {
+      var allMatch = true;
+      for (var j = 0; j < catKeys.length; j++) {
+        if (!toBool(r[catKeys[j]])) { allMatch = false; break; }
+      }
+      if (!allMatch) continue;
+    }
+    filtered.push(r);
+  }
+  renderCards();
+}
+
+function imgError(el, url) {
+  var div = document.createElement("div");
+  div.className = "img-placeholder";
+  div.innerHTML = '<div class="ph-icon">Warning: load failed</div><div>Image failed to load</div><div class="ph-url">' + url + '</div>';
+  el.parentNode.replaceChild(div, el);
+}
+
+function onReviewChange(orderId, taskId, field, value) {
+  var key = orderId + "|" + taskId;
+  if (!reviewData[key]) {
+    reviewData[key] = { aiCorrect: "", confusionMatrix: "", comments: "" };
+  }
+  reviewData[key][field] = value;
+
+  var cardEl = document.getElementById("card-" + orderId);
+  if (cardEl) {
+    var rev = reviewData[key];
+    if (rev.aiCorrect !== "" || rev.confusionMatrix !== "") {
+      cardEl.classList.add("card-reviewed");
+      var badge = cardEl.querySelector(".card-badge-reviewed");
+      if (badge) badge.style.display = "inline-flex";
+    } else {
+      cardEl.classList.remove("card-reviewed");
+      var badge2 = cardEl.querySelector(".card-badge-reviewed");
+      if (badge2) badge2.style.display = "none";
+    }
+  }
+
+  var el = document.getElementById("rev-" + field + "-" + orderId);
+  if (el) {
+    if (value !== "") el.classList.add("filled");
+    else el.classList.remove("filled");
+  }
+
+  populateManualReviewFilter();
+  updateDashboard();
+}
+
+function renderCards() {
+  var container = document.getElementById("cardsContainer");
+  var noRes = document.getElementById("noResults");
+  var total = filtered.length;
+
+  if (total === 0) {
+    container.innerHTML = "";
+    noRes.style.display = "block";
+    updatePagination(0, 0, 0);
+    return;
+  }
+  noRes.style.display = "none";
+
+  var pp = perPage === "all" ? total : perPage;
+  var maxPage = Math.ceil(total / pp) - 1;
+  if (currentPage > maxPage) currentPage = maxPage;
+  if (currentPage < 0) currentPage = 0;
+  var start = currentPage * pp;
+  var end = Math.min(start + pp, total);
+  var page = filtered.slice(start, end);
+
+  var html = "";
+  for (var idx = 0; idx < page.length; idx++) {
+    var r = page[idx];
+    var num = start + idx + 1;
+    var origOk = r.originalUrl && r.originalUrl !== "null" && r.originalUrl.trim() !== "";
+    var decClass = "";
+    var decLower = (r.imageDecision || "").toLowerCase();
+    if (decLower.indexOf("unacceptable") !== -1) decClass = "decision-bad";
+    else if (decLower.indexOf("acceptable") !== -1) decClass = "decision-good";
+
+    var fraudOn = toBool(r.isFraudPhoto);
+    var faceOn = toBool(r.isHumanFaceDetected);
+    var vehicleOn = toBool(r.isShotFromInsideVehicle);
+    var profanityOn = toBool(r.isProfanityDetected);
+
+    var rev = getReview(r);
+    var reviewed = isRowReviewed(r);
+    var oid = r.orderId || "";
+    var tid = r.taskId || "";
+
+    html += '<div class="card' + (reviewed ? " card-reviewed" : "") + '" id="card-' + oid + '">';
+    html += '<div class="card-header"><span class="card-badge">#' + num + '</span>';
+    html += '<span class="card-order">Order: ' + (oid || "N/A") + '</span>';
+    html += '<span class="card-badge-reviewed" style="display:' + (reviewed ? "inline-flex" : "none") + '">&#10003; Reviewed</span>';
+    html += '</div>';
+    html += '<div class="images-row">';
+
+    html += '<div class="img-col"><div class="img-label">Processed Image</div><div class="img-container">';
+    if (r.imageUrl && r.imageUrl !== "null") {
+      html += '<img src="' + r.imageUrl + '" alt="Processed" data-full="' + r.imageUrl + '" class="clickable-img">';
+    } else {
+      html += '<div class="img-placeholder"><div class="ph-icon">No img</div><div>No Image Available</div></div>';
+    }
+    html += '</div></div>';
+
+    html += '<div class="img-col"><div class="img-label">Original Image</div><div class="img-container">';
+    if (origOk) {
+      html += '<img src="' + r.originalUrl + '" alt="Original" data-full="' + r.originalUrl + '" class="clickable-img">';
+    } else {
+      html += '<div class="img-placeholder"><div class="ph-icon">N/A</div><div>No Original Image Available</div></div>';
+    }
+    html += '</div></div>';
+
+    html += '</div>';
+
+    html += '<div class="meta-row">';
+    html += '<div class="meta-item"><span class="meta-key">Task ID:</span><span class="meta-val" style="font-family:monospace;font-size:.72rem">' + (tid || "N/A") + '</span></div>';
+    html += '<div class="meta-item"><span class="meta-key">Decision:</span><span class="meta-val ' + decClass + '">' + (r.imageDecision || "N/A") + '</span></div>';
+    html += '<div class="meta-item"><span class="meta-key">Updated:</span><span class="meta-val">' + (r.pinotUpdatedTs || "N/A") + '</span></div>';
+
+    if (csvHasReviewCols && r.reviewAiCorrect !== undefined && r.reviewAiCorrect !== "") {
+      html += '<div class="meta-item"><span class="meta-key">CSV reviewAiCorrect:</span><span class="meta-val" style="font-weight:700;color:#7c3aed">' + escapeHtml(r.reviewAiCorrect) + '</span><span class="csv-col-tag">from CSV</span></div>';
+    }
+    html += '</div>';
+
+    html += '<div class="pills-row">';
+    html += '<span class="pill ' + (fraudOn ? "p-fraud-on" : "p-off") + '">Fraud Photo: ' + (fraudOn ? "YES" : "No") + '</span>';
+    html += '<span class="pill ' + (faceOn ? "p-face-on" : "p-off") + '">Human Face: ' + (faceOn ? "YES" : "No") + '</span>';
+    html += '<span class="pill ' + (vehicleOn ? "p-vehicle-on" : "p-off") + '">Inside Vehicle: ' + (vehicleOn ? "YES" : "No") + '</span>';
+    html += '<span class="pill ' + (profanityOn ? "p-profanity-on" : "p-off") + '">Profanity: ' + (profanityOn ? "YES" : "No") + '</span>';
+    html += '</div>';
+
+    html += '<div class="review-section">';
+
+    html += '<div class="review-group">';
+    html += '<label>Manual Review</label>';
+    html += '<select class="review-select' + (rev.aiCorrect ? " filled" : "") + '" id="rev-aiCorrect-' + oid + '" onchange="onReviewChange(\'' + oid + '\',\'' + tid + '\',\'aiCorrect\',this.value)">';
+    html += '<option value=""' + (rev.aiCorrect === "" ? " selected" : "") + '>-- Select --</option>';
+    html += '<option value="Yes"' + (rev.aiCorrect === "Yes" ? " selected" : "") + '>Yes</option>';
+    html += '<option value="No"' + (rev.aiCorrect === "No" ? " selected" : "") + '>No</option>';
+    html += '</select>';
+    html += '</div>';
+
+    html += '<div class="review-group">';
+    html += '<label>Confusion Matrix</label>';
+    html += '<select class="review-select' + (rev.confusionMatrix ? " filled" : "") + '" id="rev-confusionMatrix-' + oid + '" onchange="onReviewChange(\'' + oid + '\',\'' + tid + '\',\'confusionMatrix\',this.value)">';
+    html += '<option value=""' + (rev.confusionMatrix === "" ? " selected" : "") + '>-- Select --</option>';
+    html += '<option value="TP"' + (rev.confusionMatrix === "TP" ? " selected" : "") + '>TP (True Positive)</option>';
+    html += '<option value="TN"' + (rev.confusionMatrix === "TN" ? " selected" : "") + '>TN (True Negative)</option>';
+    html += '<option value="FP"' + (rev.confusionMatrix === "FP" ? " selected" : "") + '>FP (False Positive)</option>';
+    html += '<option value="FN"' + (rev.confusionMatrix === "FN" ? " selected" : "") + '>FN (False Negative)</option>';
+    html += '</select>';
+    html += '</div>';
+
+    html += '<div class="review-group" style="flex:1">';
+    html += '<label>Comments (Optional)</label>';
+    html += '<textarea class="review-comment' + (rev.comments ? " filled" : "") + '" id="rev-comments-' + oid + '" placeholder="Add review notes..." onchange="onReviewChange(\'' + oid + '\',\'' + tid + '\',\'comments\',this.value)">' + escapeHtml(rev.comments) + '</textarea>';
+    html += '</div>';
+
+    if (reviewed) {
+      html += '<div class="review-tag">&#10003; Reviewed</div>';
+    }
+
+    html += '</div>';
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+  updatePagination(start + 1, end, total);
+
+  var imgs = container.querySelectorAll("img");
+  for (var i = 0; i < imgs.length; i++) {
+    (function(img) {
+      var url = img.getAttribute("data-full") || img.src;
+      img.onerror = function() { imgError(img, url); };
+      img.onclick = function() { openModal(url); };
+    })(imgs[i]);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function escapeCsvField(val) {
+  if (!val) return "";
+  val = String(val);
+  if (val.indexOf(",") !== -1 || val.indexOf('"') !== -1 || val.indexOf("\n") !== -1) {
+    return '"' + val.replace(/"/g, '""') + '"';
+  }
+  return val;
+}
+
+function downloadReviewedCSV() {
+  if (allData.length === 0) return;
+
+  var origHeaders = Object.keys(allData[0]);
+  var reviewCols = ["reviewAiCorrect", "reviewConfusionMatrix", "reviewComments"];
+  var cleanHeaders = [];
+  for (var i = 0; i < origHeaders.length; i++) {
+    if (reviewCols.indexOf(origHeaders[i]) === -1) {
+      cleanHeaders.push(origHeaders[i]);
+    }
+  }
+  var allHeaders = cleanHeaders.concat(reviewCols);
+  var csvLines = [allHeaders.map(escapeCsvField).join(",")];
+
+  for (var i = 0; i < allData.length; i++) {
+    var r = allData[i];
+    var rev = getReview(r);
+    var row = [];
+    for (var j = 0; j < cleanHeaders.length; j++) {
+      row.push(escapeCsvField(r[cleanHeaders[j]]));
+    }
+    row.push(escapeCsvField(rev.aiCorrect));
+    row.push(escapeCsvField(rev.confusionMatrix));
+    row.push(escapeCsvField(rev.comments));
+    csvLines.push(row.join(","));
+  }
+
+  var csvContent = csvLines.join("\n");
+  var blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement("a");
+  link.setAttribute("href", url);
+  var timestamp = new Date().toISOString().slice(0,19).replace(/[T:]/g,"-");
+  link.setAttribute("download", "image_review_" + timestamp + ".csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function updatePagination(s, e, t) {
+  document.getElementById("pagInfo").textContent = t > 0 ? "Showing " + s + " - " + e + " of " + t + " records" : "No records";
+  document.getElementById("prevBtn").disabled = currentPage <= 0;
+  var pp = perPage === "all" ? t : perPage;
+  document.getElementById("nextBtn").disabled = (currentPage + 1) * pp >= t;
+}
+
+function changePage(dir) {
+  currentPage += dir;
+  if (currentPage < 0) currentPage = 0;
+  renderCards();
+  window.scrollTo({ top: document.querySelector(".container").offsetTop, behavior: "smooth" });
+}
+
+function openModal(src) {
+  document.getElementById("modalImg").src = src;
+  document.getElementById("modal").classList.add("show");
+}
+function closeModal() {
+  document.getElementById("modal").classList.remove("show");
+  document.getElementById("modalImg").src = "";
+}
+
+function initData(data) {
+  allData = data;
+  reviewData = {};
+  prePopulateReviewDataFromCSV();
+  populateManualReviewFilter();
+  updateDashboard();
+  populateDecisionFilter();
+  currentPage = 0;
+  applyFilters();
+}
+
+function handleFile(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var data = parseCSV(e.target.result);
+    document.getElementById("infoBanner").classList.add("hidden");
+    activeCats = {};
+    document.querySelectorAll(".cat-btn").forEach(function(b) { b.classList.remove("active"); });
+    document.getElementById("searchBox").value = "";
+    document.getElementById("decisionFilter").value = "";
+    document.getElementById("manualReviewFilter").value = "";
+    initData(data);
+
+    var colMsg = "";
+    if (csvHasReviewCols) {
+      colMsg = '<br><span style="color:#7c3aed;font-weight:600">&#10003; Found reviewAiCorrect column — pre-loaded into Manual Review filter!</span>';
+    }
+    document.getElementById("dropZone").innerHTML = '<h3>Loaded ' + allData.length + ' records from ' + file.name + '</h3><p style="color:#16a34a;font-weight:600">CSV loaded successfully!</p>' + colMsg;
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById("searchBox").addEventListener("input", function() { currentPage = 0; applyFilters(); });
+document.getElementById("decisionFilter").addEventListener("change", function() { currentPage = 0; applyFilters(); });
+document.getElementById("manualReviewFilter").addEventListener("change", function() { currentPage = 0; applyFilters(); });
+document.getElementById("pageSize").addEventListener("change", function() {
+  var v = this.value;
+  perPage = v === "all" ? "all" : parseInt(v);
+  currentPage = 0;
+  renderCards();
+});
+document.getElementById("prevBtn").addEventListener("click", function() { changePage(-1); });
+document.getElementById("nextBtn").addEventListener("click", function() { changePage(1); });
+
+document.getElementById("btn-fraud").addEventListener("click", function() { toggleCat(this); });
+document.getElementById("btn-face").addEventListener("click", function() { toggleCat(this); });
+document.getElementById("btn-vehicle").addEventListener("click", function() { toggleCat(this); });
+document.getElementById("btn-profanity").addEventListener("click", function() { toggleCat(this); });
+document.getElementById("btn-flagged").addEventListener("click", function() { toggleCat(this); });
+document.getElementById("btn-clear").addEventListener("click", function() { clearCats(); });
+
+function toggleCat(btn) {
+  var cat = btn.getAttribute("data-cat");
+  if (cat === "__anyFlag") {
+    document.querySelectorAll(".cat-btn[data-cat]").forEach(function(b) {
+      if (b.getAttribute("data-cat") !== "__anyFlag") b.classList.remove("active");
+    });
+    activeCats = {};
+    if (btn.classList.contains("active")) {
+      btn.classList.remove("active");
+    } else {
+      btn.classList.add("active");
+      activeCats["__anyFlag"] = true;
+    }
+  } else {
+    var flagBtn = document.getElementById("btn-flagged");
+    flagBtn.classList.remove("active");
+    delete activeCats["__anyFlag"];
+    if (btn.classList.contains("active")) {
+      btn.classList.remove("active");
+      delete activeCats[cat];
+    } else {
+      btn.classList.add("active");
+      activeCats[cat] = true;
+    }
+  }
+  currentPage = 0;
+  applyFilters();
+}
+
+function clearCats() {
+  activeCats = {};
+  document.querySelectorAll(".cat-btn").forEach(function(b) { b.classList.remove("active"); });
+  currentPage = 0;
+  applyFilters();
+}
+
+document.getElementById("modal").addEventListener("click", closeModal);
+document.getElementById("modalCloseBtn").addEventListener("click", function(e) { e.stopPropagation(); closeModal(); });
+
+document.addEventListener("keydown", function(e) {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
+  if (e.key === "ArrowLeft") { changePage(-1); e.preventDefault(); }
+  if (e.key === "ArrowRight") { changePage(1); e.preventDefault(); }
+  if (e.key === "Escape") closeModal();
+});
+
+var dz = document.getElementById("dropZone");
+dz.addEventListener("dragover", function(e) { e.preventDefault(); dz.classList.add("drag-over"); });
+dz.addEventListener("dragleave", function() { dz.classList.remove("drag-over"); });
+dz.addEventListener("drop", function(e) {
+  e.preventDefault();
+  dz.classList.remove("drag-over");
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+document.getElementById("uploadBtn").addEventListener("click", function() {
+  document.getElementById("fileInput").click();
+});
+document.getElementById("fileInput").addEventListener("change", function() {
+  if (this.files.length) handleFile(this.files[0]);
+});
+
+initData(parseCSV(SAMPLE_CSV));
+</script>
+</body>
+</html>
