@@ -48,20 +48,27 @@ Timestamped filename: image_review_YYYY-MM-DD-HH-MM-SS.csv
 8. 📄 Pagination
 Configurable: 5 / 10 / 25 / 50 / All per page
 Smooth scroll-to-top on page change
+
 🧠 AI Detection Categories Tracked
+
 Category	Field	What It Detects
+
 🔴 Fraud Photo	isFraudPhoto	Potentially fraudulent delivery images
+
 🟠 Human Face	isHumanFaceDetected	Photos containing human faces (privacy concern)
+
 🔵 Inside Vehicle	isShotFromInsideVehicle	Photos taken from inside a vehicle
+
 🟣 Profanity	isProfanityDetected	Images containing profane content
+
 ⚙️ Technical Details
+
 Aspect	Detail
-Architecture	Single-file HTML — zero dependencies, no frameworks
-Styling	Embedded CSS with responsive design (mobile-friendly at 768px & 480px breakpoints)
-JavaScript	Vanilla JS — custom CSV parser, in-memory filtering, DOM rendering
-State	All data held in-memory (allData, reviewData, filtered) — no backend/database
+
 Hosting	GitHub Pages at gecgithub01.walmart.com
+
 Image source	images.delivery.walmart.com — Walmart delivery image CDN
+
 💡 Summary
 This is a lightweight, self-contained AI evaluation tool that enables reviewers to audit delivery image classification decisions made by AI models. It tracks whether the AI correctly flagged photos for fraud, human faces, vehicle interiors, and profanity — then exports the human review labels (including confusion matrix classifications) back to CSV for model performance analysis.
 
